@@ -1,0 +1,6 @@
+{
+  "name": "Aether OS",
+  "description": "A refined music player dashboard with multi-source integration and advanced marketplace add-ons.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
