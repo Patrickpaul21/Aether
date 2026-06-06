@@ -20,6 +20,7 @@ import { useState } from 'react';
 import { ADDONS } from '../constants';
 import { AddOn } from '../types';
 import { useAddonStore } from '../Store/addonStore';
+import { getSpotifyAuthUrl } from '../addons/spotify/index';
 
 // ── Map each addon's icon key to a store ID ──────────────────────────────────
 // Convention: 'aether.{icon}' — keep this consistent with the addon files
@@ -105,14 +106,14 @@ export default function AddOnsScreen() {
 
   // ── Connect / Install handler ────────────────────────────────────────────
   const handleConnectTap = (addon: AddOn) => {
+    // Spotify uses OAuth — redirect to Spotify login
+    if (addon.icon === 'spotify') return;
     const hasFields = (CREDENTIAL_FIELDS[addon.icon] ?? []).length > 0;
     if (hasFields) {
-      // Open credential sheet
       setConnectingId(addon.icon);
       setFormValues({});
       setConnectError(null);
     } else {
-      // No credentials needed — install immediately
       install(toStoreId(addon));
     }
   };
@@ -364,6 +365,8 @@ function getIcon(icon: string, color?: string) {
     case 'jellyfin':    return <Disc      className={cls} size={22} />;
     case 'youtube':     return <Youtube   className={cls} size={22} />;
     case 'radio':       return <Radio     className={cls} size={22} />;
+    case 'archive':     return <span className={`font-black text-sm ${cls}`}>IA</span>;
+    case 'spotify': return <span className={`font-black text-sm ${cls}`}>♫</span>;
     case 'soundcloud':  return <Music2    className={cls} size={22} />;
     case 'lastfm':      return <span className={`font-black text-lg italic leading-none ${cls}`}>as</span>;
     default:            return <LayoutGrid className={cls} size={22} />;

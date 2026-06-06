@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import React, { useState, useEffect, useRef } from 'react';
-
+import { useThemeStore, THEMES } from '../Store/themestore';
 // Translation dictionary for all main pages
 const TRANSLATIONS: Record<string, Record<string, string>> = {
   en: {
@@ -111,7 +111,7 @@ export default function SettingsScreen() {
   
   // Settings values backed by localStorage
   const [lang, setLang] = useState<string>(() => localStorage.getItem('app-lang') || 'en');
-  const [theme, setTheme] = useState<string>(() => localStorage.getItem('app-theme') || 'dark');
+  const { activeTheme, setTheme } = useThemeStore();
   const [audioQuality, setAudioQuality] = useState<string>(() => localStorage.getItem('pref-quality') || 'high');
   const [gapless, setGapless] = useState<boolean>(() => localStorage.getItem('pref-gapless') === 'true');
   const [crossfade, setCrossfade] = useState<number>(() => Number(localStorage.getItem('pref-crossfade')) || 4);
@@ -136,28 +136,33 @@ export default function SettingsScreen() {
   // Dynamic Theme Styling Apply inside body element
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'oled') {
+    if (activeTheme === 'theme-oled') {
       root.style.setProperty('--color-brand-dark', '#000000');
       root.style.setProperty('--color-brand-surface', '#000000');
       root.style.setProperty('--color-brand-card', '#0b0b0c');
       root.style.setProperty('--color-brand-border', '#1c1c1f');
-    } else if (theme === 'cosmic') {
+    } else if (activeTheme === 'theme-cosmic') {
       root.style.setProperty('--color-brand-dark', '#08060f');
       root.style.setProperty('--color-brand-surface', '#100b21');
       root.style.setProperty('--color-brand-card', '#17112d');
       root.style.setProperty('--color-brand-border', '#2b1f52');
-    } else if (theme === 'obsidian') {
+    } else if (activeTheme === 'theme-obsidian') {
       root.style.setProperty('--color-brand-dark', '#111215');
       root.style.setProperty('--color-brand-surface', '#181a1f');
       root.style.setProperty('--color-brand-card', '#22252c');
       root.style.setProperty('--color-brand-border', '#2e333d');
-    } else { // Standard Dark (Pitch black / dark grey)
+    } else if (activeTheme === 'theme-ascii') {
       root.style.setProperty('--color-brand-dark', '#0a0a0a');
       root.style.setProperty('--color-brand-surface', '#121212');
       root.style.setProperty('--color-brand-card', '#171717');
       root.style.setProperty('--color-brand-border', '#262626');
+    } else {
+      root.style.setProperty('--color-brand-dark', '#000000');
+      root.style.setProperty('--color-brand-surface', '#000000');
+      root.style.setProperty('--color-brand-card', '#0b0b0c');
+      root.style.setProperty('--color-brand-border', '#1c1c1f');
     }
-  }, [theme]);
+  }, [activeTheme]);
 
   const t = TRANSLATIONS[lang] || TRANSLATIONS['en'];
 
@@ -175,14 +180,12 @@ export default function SettingsScreen() {
             onBack={() => setActiveSubPage(null)} 
           />
         );
-      case 'theme':
-        return (
-          <ThemeSubPage 
-            theme={theme} 
-            setTheme={(th) => { setTheme(th); localStorage.setItem('app-theme', th); addLog('SUCCESS', `Applied global theme template: ${th}`); }}
-            onBack={() => setActiveSubPage(null)} 
-          />
-        );
+        case 'theme':
+          return (
+            <ThemeSubPage 
+              onBack={() => setActiveSubPage(null)} 
+            />
+          );
       case 'language':
         return (
           <LanguageSubPage 
@@ -205,7 +208,7 @@ export default function SettingsScreen() {
             addLog={addLog}
             onResetApp={() => {
               localStorage.clear();
-              setTheme('dark');
+              setTheme('theme-oled');
               setLang('en');
               setAudioQuality('high');
               setGapless(false);
@@ -261,7 +264,7 @@ export default function SettingsScreen() {
                 <SettingsItem 
                   icon={<Moon size={20} className="text-white/60" />} 
                   title={t.theme} 
-                  subtitle={theme.toUpperCase()} 
+                  subtitle={activeTheme.toUpperCase()} 
                   subtitleColor="text-white/80 font-semibold"
                   onClick={() => { setActiveSubPage('theme'); addLog('INFO', 'Opened visual themes selection.'); }}
                 />
@@ -792,76 +795,89 @@ function PlaybackSubPage({
 }
 
 /* 4. THEME (APPEARANCE) SUB-PAGE */
-function ThemeSubPage({ theme, setTheme, onBack }: {
-  theme: string;
-  setTheme: (t: string) => void;
-  onBack: () => void;
-}) {
+function ThemeSubPage({ onBack }: { onBack: () => void }) {
+  const { activeTheme, setTheme } = useThemeStore();
+
   return (
     <div>
       <SubPageHeader title="Visual Canvas Themes" onBack={onBack} />
 
-      {/* Selector Grid */}
       <h3 className="text-xs font-bold uppercase tracking-widest text-[#a3a3a3] mb-3 ml-1">Pick Ambient Canvas</h3>
       <div className="grid grid-cols-2 gap-3 mb-6">
-        {[
-          { id: 'dark', name: 'Carbon Jet', desc: 'Standard space-saving dark gray tone', bg: 'bg-[#171717]' },
-          { id: 'cosmic', name: 'Cosmic Nebula', desc: 'Deep violet spectrum with stellar depth', bg: 'bg-[#100b21]' },
-          { id: 'oled', name: 'Absolute OLED', desc: 'Pure infinity black for eye protection', bg: 'bg-[#000000] border-white/10 border' },
-          { id: 'obsidian', name: 'Obsidian Gray', desc: 'Sleek brushed metal and graphite grey', bg: 'bg-[#22252c]' }
-        ].map(item => (
+        {THEMES.map(item => (
           <div
             key={item.id}
             onClick={() => setTheme(item.id)}
             className={`p-4 rounded-2xl cursor-pointer border hover:scale-[1.02] transition-all flex flex-col justify-between h-36 ${
-              theme === item.id
-                ? 'border-white grid-pulse'
+              activeTheme === item.id
+                ? 'border-white'
                 : 'border-white/[0.04] bg-brand-card hover:bg-white/[0.03]'
             }`}
           >
             <div className="flex justify-between items-start">
-              <div className={`w-8 h-8 rounded-full ${item.bg}`} />
-              {theme === item.id && (
+              <div className={`w-8 h-8 rounded-full ${
+                item.id === 'theme-oled' ? 'bg-black border border-white/20' :
+                item.id === 'theme-cosmic' ? 'bg-[#0d0b1e]' :
+                item.id === 'theme-obsidian' ? 'bg-[#0f1710]' :
+                'bg-black border border-green-500/50'
+              }`} />
+              {activeTheme === item.id && (
                 <div className="bg-white p-1 rounded-full text-black">
                   <Check size={12} strokeWidth={3} />
                 </div>
               )}
             </div>
             <div className="text-left mt-2">
-              <p className="text-sm font-black text-white/95">{item.name}</p>
-              <p className="text-[10px] text-white/40 leading-tight mt-0.5">{item.desc}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-black text-white/95">{item.name}</p>
+                {item.isCustom && (
+                  <span className="text-[9px] font-black uppercase tracking-wider bg-white/10 border border-white/10 text-white/50 px-1.5 py-0.5 rounded">
+                    Custom
+                  </span>
+                )}
+              </div>
+              <p className="text-[10px] text-white/40 leading-tight mt-0.5">{item.description}</p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Visual responsive mockup card container */}
       <h3 className="text-xs font-bold uppercase tracking-widest text-[#a3a3a3] mb-3 ml-1">Live Theme Preview</h3>
       <div className="bg-brand-card border border-white/[0.04] p-5 rounded-2xl space-y-4">
-        <p className="text-xs text-white/40">These settings are applied globally across the interface in real-time.</p>
-        
-        {/* Mock representation of player card */}
-        <div className="rounded-xl border border-white/5 p-4 space-y-3 bg-brand-surface/65 relative overflow-hidden backdrop-blur-md">
+        <p className="text-xs text-white/40">Applied globally across the interface in real-time. Persists on reload.</p>
+        <div className="rounded-xl border border-brand-border p-4 space-y-3 bg-brand-surface relative overflow-hidden">
           <div className="flex gap-3">
-            <div className="w-10 h-10 rounded bg-zinc-800 shrink-0 shadow-md border border-white/10" />
+            <div className="w-10 h-10 rounded bg-brand-card shrink-0 shadow-md border border-brand-border" />
             <div className="flex-1 min-w-0 flex flex-col justify-center">
               <div className="h-3 w-1/2 bg-white/80 rounded" />
               <div className="h-2 w-1/3 bg-white/30 rounded mt-1.5" />
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-black">
+              <div className="w-6 h-6 rounded-full bg-brand-green flex items-center justify-center text-black">
                 <Play size={10} fill="currentColor" />
               </div>
             </div>
           </div>
-          <div className="h-1 w-full bg-white/10 rounded-full">
-            <div className="h-full bg-white w-2/5 rounded-full" />
+          <div className="h-1 w-full bg-brand-border rounded-full">
+            <div className="h-full bg-brand-green w-2/5 rounded-full" />
           </div>
         </div>
       </div>
+
+      {/* ASCII font preview */}
+      {activeTheme === 'theme-ascii' && (
+        <div className="mt-4 bg-black border border-green-500/30 p-4 rounded-2xl font-mono text-green-400 text-xs space-y-1">
+          <p>{'> AETHER OS v1.0.0'}</p>
+          <p>{'> THEME: ASCII TERMINAL'}</p>
+          <p>{'> STATUS: ONLINE ■■■■■□□□□□'}</p>
+          <p className="animate-pulse">{'> _'}</p>
+        </div>
+      )}
     </div>
   );
 }
+
+      
 
 /* 5. APP LANGUAGE SUB-PAGE */
 function LanguageSubPage({ lang, setLang, onBack }: {

@@ -1,8 +1,9 @@
-import { ChevronDown, MoreHorizontal, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat, Star, Volume, Volume1, Volume2, VolumeX, List, Radio, MessageSquareText, Check, Music2, Cast, Laptop, Download, Loader2, GripVertical, Trash2 } from 'lucide-react';
+import { ChevronDown, MoreHorizontal, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat, Star, Volume, Volume1, Volume2, VolumeX, List, Radio, MessageSquareText, Check, Music2, Cast, Laptop, Download, Loader2, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useState, useEffect, useRef } from 'react';
 import { Track } from '../types';
 import { usePlayerStore } from '../Store/playerStore';
+import { usePlaylistStore } from '../Store/playliststore';
 
 interface NowPlayingProps {
   track: Track;
@@ -16,36 +17,41 @@ type ViewMode = 'artwork' | 'lyrics' | 'queue';
 interface LyricLine { text: string; time: number; }
 
 export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClose, seek }: NowPlayingProps) {
-  const [viewMode,      setViewMode]      = useState<ViewMode>('artwork');
-  const [isStarred,     setIsStarred]     = useState(false);
-  const [isShuffle,     setIsShuffle]     = useState(false);
-  const [repeatMode,    setRepeatMode]    = useState<'off' | 'all' | 'one'>('off');
-  const [prevVolume,    setPrevVolume]    = useState(70);   // stores 0-100 for mute/unmute
+  const [viewMode, setViewMode] = useState<ViewMode>('artwork');
+  const [isStarred, setIsStarred] = useState(false);
+  const [isShuffle, setIsShuffle] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
+  const [prevVolume, setPrevVolume] = useState(70);
   const [showVolumeHUD, setShowVolumeHUD] = useState(false);
-  const [showAirPlay,   setShowAirPlay]   = useState(false);
+  const [showAirPlay, setShowAirPlay] = useState(false);
   const [activeRouting, setActiveRouting] = useState('My Device');
   const [downloadStates, setDownloadStates] = useState<Record<string, 'idle' | 'downloading' | 'downloaded'>>({});
-  const { volume, setVolume, currentTime, duration, next, prev, queue, currentIndex, removeFromQueue } = usePlayerStore();
+  const [showPlaylistPicker, setShowPlaylistPicker] = useState(false);
+  const [addedToPlaylistId, setAddedToPlaylistId] = useState<number | null>(null);
 
-  // Store is 0–1. UI works in 0–100 throughout this file.
-  const volumePercent                    = Math.round(volume * 100);
+  const { volume, setVolume, currentTime, duration, next, prev, queue, currentIndex, removeFromQueue } = usePlayerStore();
+  const { playlists, loadPlaylists, addTrack } = usePlaylistStore();
+
+  const volumePercent = Math.round(volume * 100);
   const handleVolumeChange = (val: number) => setVolume(val / 100);
 
-  const hudTimeoutRef  = useRef<NodeJS.Timeout | null>(null);
-  const isFirstRender  = useRef(true);
+  const hudTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isFirstRender = useRef(true);
   const lyricsContainerRef = useRef<HTMLDivElement>(null);
-  const activeLyricRef     = useRef<HTMLParagraphElement>(null);
+  const activeLyricRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => { loadPlaylists(); }, []);
 
   const lyricsLines: LyricLine[] = [
-    { time: 0,   text: "Searching for the signal in the static" },
-    { time: 10,  text: "Fragments of a world we used to know" },
-    { time: 20,  text: "The baseline pulses like a heartbeat" },
-    { time: 30,  text: "Moving where the silver shadows go" },
-    { time: 40,  text: "Protocol initiated, eyes wide open" },
-    { time: 50,  text: "System override, no turning back" },
-    { time: 60,  text: "Digital remnants of an ancient song" },
-    { time: 70,  text: "Echoing through the corridors of time" },
-    { time: 80,  text: "Everything is numbers, silver light" },
+    { time: 0, text: "Searching for the signal in the static" },
+    { time: 10, text: "Fragments of a world we used to know" },
+    { time: 20, text: "The baseline pulses like a heartbeat" },
+    { time: 30, text: "Moving where the silver shadows go" },
+    { time: 40, text: "Protocol initiated, eyes wide open" },
+    { time: 50, text: "System override, no turning back" },
+    { time: 60, text: "Digital remnants of an ancient song" },
+    { time: 70, text: "Echoing through the corridors of time" },
+    { time: 80, text: "Everything is numbers, silver light" },
     { time: 100, text: "Moving through the middle of the night" },
     { time: 120, text: "Eclipse Protocol, set it in motion" },
     { time: 130, text: "Deep dive into the digital ocean" },
@@ -63,7 +69,6 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
     }
   }, [currentTime, viewMode]);
 
-  // Show volume HUD whenever volume changes (skip first render)
   useEffect(() => {
     if (isFirstRender.current) { isFirstRender.current = false; return; }
     setShowVolumeHUD(true);
@@ -76,7 +81,7 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
     `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
   const currentLyricIndex = [...lyricsLines].reverse().findIndex(l => currentTime >= l.time);
-  const activeIndex       = currentLyricIndex !== -1 ? lyricsLines.length - 1 - currentLyricIndex : 0;
+  const activeIndex = currentLyricIndex !== -1 ? lyricsLines.length - 1 - currentLyricIndex : 0;
 
   const handleDownload = (trackId: string) => {
     if (downloadStates[trackId] === 'downloaded') { setDownloadStates(p => ({ ...p, [trackId]: 'idle' })); return; }
@@ -85,15 +90,13 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
     setTimeout(() => setDownloadStates(p => ({ ...p, [trackId]: 'downloaded' })), 2000);
   };
 
-  // ── Volume icon helper (uses 0-100 percent) ──────────────────────────────
   const VolumeIcon = ({ size = 16 }: { size?: number }) => {
-    if (volumePercent === 0)   return <VolumeX size={size} />;
-    if (volumePercent <= 33)   return <Volume  size={size} />;
-    if (volumePercent <= 66)   return <Volume1 size={size} />;
+    if (volumePercent === 0) return <VolumeX size={size} />;
+    if (volumePercent <= 33) return <Volume size={size} />;
+    if (volumePercent <= 66) return <Volume1 size={size} />;
     return <Volume2 size={size} />;
   };
 
-  // ── Shared volume slider background style ────────────────────────────────
   const sliderBg = `linear-gradient(to right,
     rgba(255,255,255,0.9) 0%,
     rgba(255,255,255,0.9) ${volumePercent}%,
@@ -132,7 +135,10 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
             <span className="block text-[10px] uppercase tracking-[0.18em] text-white/40 font-semibold mb-0.5">Playing From</span>
             <span className="block text-[14px] font-semibold tracking-tight">{track.source}</span>
           </div>
-          <button className="p-2 -mr-2 text-white/80 hover:text-white transition-colors">
+          <button
+            onClick={() => setShowPlaylistPicker(true)}
+            className="p-2 -mr-2 text-white/80 hover:text-white transition-colors"
+          >
             <MoreHorizontal size={22} />
           </button>
         </header>
@@ -152,13 +158,13 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
                 <div className="w-36 h-1.5 bg-white/10 rounded-full overflow-hidden">
                   <motion.div
                     className="h-full rounded-full bg-white"
-                    style={{ width: `${volumePercent}%` }}   // ← fixed: was ${volume}%
+                    style={{ width: `${volumePercent}%` }}
                     layoutId="hudVolumeFill"
                     transition={{ type: 'spring', damping: 20, stiffness: 160 }}
                   />
                 </div>
                 <span className="text-[11px] font-bold tracking-wide text-white/80 w-8 text-right font-mono">
-                  {volumePercent}%                             {/* ← fixed: was {volume}% */}
+                  {volumePercent}%
                 </span>
               </motion.div>
             )}
@@ -169,12 +175,11 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
         <div className="flex-1 overflow-hidden px-6 flex flex-col">
           <AnimatePresence mode="wait">
 
-            {/* ── ARTWORK VIEW ── */}
+            {/* ARTWORK VIEW */}
             {viewMode === 'artwork' && (
               <motion.div key="artwork" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 1.02 }} transition={{ duration: 0.25 }} className="flex-1 flex flex-col">
 
-                {/* Album art */}
                 <div className="flex-1 flex items-center justify-center py-4">
                   <motion.div
                     animate={{ scale: isPlaying ? 1 : 0.92 }}
@@ -186,7 +191,6 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
                   </motion.div>
                 </div>
 
-                {/* Track info */}
                 <div className="flex justify-between items-center mb-5">
                   <div className="flex-1 min-w-0 pr-4">
                     <h1 className="text-[22px] font-bold text-white tracking-tight leading-tight truncate">{track.title}</h1>
@@ -202,8 +206,10 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
                         downloadStates[track.id] === 'downloaded' ? 'text-brand-green'
                         : downloadStates[track.id] === 'downloading' ? 'text-white/30'
                         : 'text-white/40 hover:text-white'}`}>
-                      {downloadStates[track.id] === 'downloaded' ? <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }}><Check size={20} strokeWidth={2.5} /></motion.div>
-                        : downloadStates[track.id] === 'downloading' ? <Loader2 size={20} className="animate-spin text-brand-green" />
+                      {downloadStates[track.id] === 'downloaded'
+                        ? <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }}><Check size={20} strokeWidth={2.5} /></motion.div>
+                        : downloadStates[track.id] === 'downloading'
+                        ? <Loader2 size={20} className="animate-spin text-brand-green" />
                         : <Download size={20} />}
                     </button>
                   </div>
@@ -243,7 +249,7 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
                     style={{ boxShadow: '0 8px 30px rgba(255,255,255,0.2)' }}>
                     {isPlaying
                       ? <Pause size={28} fill="currentColor" strokeWidth={0} />
-                      : <Play  size={28} fill="currentColor" strokeWidth={0} className="ml-1" />}
+                      : <Play size={28} fill="currentColor" strokeWidth={0} className="ml-1" />}
                   </button>
                   <button onClick={next} className="p-2 text-white active:scale-90 active:opacity-60 transition-all">
                     <SkipForward size={30} fill="currentColor" strokeWidth={0} />
@@ -258,29 +264,19 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
                   </button>
                 </div>
 
-                {/* ── Volume slider ── */}
+                {/* Volume slider */}
                 <div className="flex items-center gap-3 mb-7 px-1">
-                  {/* Mute toggle */}
                   <button
                     onClick={() => {
-                      if (volumePercent > 0) {
-                        setPrevVolume(volumePercent);
-                        handleVolumeChange(0);
-                      } else {
-                        handleVolumeChange(prevVolume || 70);
-                      }
+                      if (volumePercent > 0) { setPrevVolume(volumePercent); handleVolumeChange(0); }
+                      else handleVolumeChange(prevVolume || 70);
                     }}
                     className="text-white/40 hover:text-white transition-colors shrink-0"
                   >
                     <VolumeIcon size={16} />
                   </button>
-
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={volumePercent}                                    // ← fixed
-                    onChange={(e) => handleVolumeChange(Number(e.target.value))}  // ← fixed
+                  <input type="range" min="0" max="100" value={volumePercent}
+                    onChange={(e) => handleVolumeChange(Number(e.target.value))}
                     className="flex-1 h-1 rounded-full appearance-none cursor-pointer
                       [&::-webkit-slider-runnable-track]:h-1
                       [&::-webkit-slider-runnable-track]:rounded-full
@@ -289,14 +285,10 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
                       [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:-mt-[5px]
                       [&::-webkit-slider-thumb]:shadow-md active:[&::-webkit-slider-thumb]:scale-125
                       transition-all"
-                    style={{ background: sliderBg }}                        // ← fixed
+                    style={{ background: sliderBg }}
                   />
-
-                  {/* Max volume */}
-                  <button
-                    onClick={() => handleVolumeChange(100)}                 // ← fixed
-                    className="text-white/40 hover:text-white transition-colors shrink-0"
-                  >
+                  <button onClick={() => handleVolumeChange(100)}
+                    className="text-white/40 hover:text-white transition-colors shrink-0">
                     <Volume2 size={16} />
                   </button>
                 </div>
@@ -317,7 +309,7 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
               </motion.div>
             )}
 
-            {/* ── LYRICS VIEW ── */}
+            {/* LYRICS VIEW */}
             {viewMode === 'lyrics' && (
               <motion.div key="lyrics" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }} className="flex-1 flex flex-col pt-6 pb-10 overflow-hidden">
@@ -341,7 +333,7 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
               </motion.div>
             )}
 
-            {/* ── QUEUE VIEW ── */}
+            {/* QUEUE VIEW */}
             {viewMode === 'queue' && (
               <motion.div key="queue" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 1.02 }} className="flex-1 flex flex-col pt-6 pb-10">
@@ -361,42 +353,33 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
                   </div>
                 ) : (
                   <div className="space-y-3 flex-1 overflow-y-auto no-scrollbar">
-  {queue.map((item, idx) => (
-    <div
-      key={item.id}
-      className={`flex items-center gap-3 border p-3 rounded-2xl select-none transition-colors ${
-        idx === currentIndex
-          ? 'bg-white/[0.10] border-white/[0.12]'
-          : 'bg-white/[0.06] border-white/[0.05]'
-      }`}
-    >
-      <img
-        src={item.coverUrl}
-        alt=""
-        className="w-11 h-11 rounded-xl object-cover"
-      />
-      <div className="flex-1 min-w-0">
-        <p className={`text-sm font-semibold truncate ${
-          idx === currentIndex ? 'text-brand-green' : ''
-        }`}>
-          {item.title}
-        </p>
-        <p className="text-xs text-white/40 truncate mt-0.5">{item.artist}</p>
-      </div>
-      {idx === currentIndex && (
-        <span className="text-[9px] font-bold text-brand-green uppercase tracking-wider shrink-0">
-          Now
-        </span>
-      )}
-      <button
-        onClick={(e) => { e.stopPropagation(); removeFromQueue(item.id); }}
-        className="p-2 -mr-1 text-white/30 hover:text-red-400 active:scale-90 transition-all"
-      >
-        <Trash2 size={15} />
-      </button>
-    </div>
-  ))}
-</div>
+                    {queue.map((item, idx) => (
+                      <div key={item.id}
+                        className={`flex items-center gap-3 border p-3 rounded-2xl select-none transition-colors ${
+                          idx === currentIndex
+                            ? 'bg-white/[0.10] border-white/[0.12]'
+                            : 'bg-white/[0.06] border-white/[0.05]'
+                        }`}
+                      >
+                        <img src={item.coverUrl} alt="" className="w-11 h-11 rounded-xl object-cover" />
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-semibold truncate ${idx === currentIndex ? 'text-brand-green' : ''}`}>
+                            {item.title}
+                          </p>
+                          <p className="text-xs text-white/40 truncate mt-0.5">{item.artist}</p>
+                        </div>
+                        {idx === currentIndex && (
+                          <span className="text-[9px] font-bold text-brand-green uppercase tracking-wider shrink-0">Now</span>
+                        )}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); removeFromQueue(item.id); }}
+                          className="p-2 -mr-1 text-white/30 hover:text-red-400 active:scale-90 transition-all"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </motion.div>
             )}
@@ -408,7 +391,7 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
         </div>
       </div>
 
-      {/* ── AirPlay Drawer ── */}
+      {/* AirPlay Drawer */}
       <AnimatePresence>
         {showAirPlay && (
           <>
@@ -426,10 +409,10 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
               </div>
               <div className="space-y-2.5 mb-6">
                 {[
-                  { id: 'device',   name: 'My Device',            desc: 'Internal Speaker', icon: <Laptop  size={17} /> },
-                  { id: 'homepod',  name: 'Living Room HomePod',  desc: 'AirPlay',          icon: <Music2  size={17} /> },
-                  { id: 'tv',       name: 'Kitchen Smart TV',     desc: 'Cast',             icon: <Cast    size={17} /> },
-                  { id: 'airpods',  name: 'AirPods Max',          desc: 'Bluetooth',        icon: <Radio   size={17} /> },
+                  { id: 'device', name: 'My Device', desc: 'Internal Speaker', icon: <Laptop size={17} /> },
+                  { id: 'homepod', name: 'Living Room HomePod', desc: 'AirPlay', icon: <Music2 size={17} /> },
+                  { id: 'tv', name: 'Kitchen Smart TV', desc: 'Cast', icon: <Cast size={17} /> },
+                  { id: 'airpods', name: 'AirPods Max', desc: 'Bluetooth', icon: <Radio size={17} /> },
                 ].map((device) => {
                   const isActive = activeRouting === device.name;
                   return (
@@ -453,8 +436,6 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
                   );
                 })}
               </div>
-
-              {/* Volume in AirPlay drawer — same fixes applied */}
               <div className="flex items-center gap-3 px-1">
                 <button
                   onClick={() => {
@@ -465,16 +446,15 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
                 >
                   <VolumeIcon size={16} />
                 </button>
-                <input type="range" min="0" max="100"
-                  value={volumePercent}                                      // ← fixed
-                  onChange={(e) => handleVolumeChange(Number(e.target.value))} // ← fixed
+                <input type="range" min="0" max="100" value={volumePercent}
+                  onChange={(e) => handleVolumeChange(Number(e.target.value))}
                   className="flex-1 h-1 rounded-full appearance-none cursor-pointer
                     [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5
                     [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white
                     [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:-mt-[5px]"
-                  style={{ background: sliderBg }}                          // ← fixed
+                  style={{ background: sliderBg }}
                 />
-                <button onClick={() => handleVolumeChange(100)}             // ← fixed
+                <button onClick={() => handleVolumeChange(100)}
                   className="text-white/40 hover:text-white transition-colors">
                   <Volume2 size={16} />
                 </button>
@@ -483,6 +463,88 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
           </>
         )}
       </AnimatePresence>
+
+      {/* Add to Playlist Drawer */}
+      <AnimatePresence>
+        {showPlaylistPicker && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.6 }}
+              exit={{ opacity: 0 }}
+              onClick={() => { setShowPlaylistPicker(false); setAddedToPlaylistId(null); }}
+              className="absolute inset-0 bg-black z-[110]"
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 26, stiffness: 220 }}
+              className="absolute bottom-0 inset-x-0 bg-neutral-950 border-t border-white/10 rounded-t-[2.5rem] p-6 z-[120] text-white shadow-2xl"
+              style={{ paddingBottom: 'calc(2.5rem + env(safe-area-inset-bottom))' }}
+            >
+              <div className="flex justify-center mb-5">
+                <div className="w-10 h-1 bg-white/20 rounded-full" />
+              </div>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-[17px] font-bold">Add to Playlist</h3>
+                <button
+                  onClick={() => { setShowPlaylistPicker(false); setAddedToPlaylistId(null); }}
+                  className="text-xs font-semibold bg-white/10 px-3 py-1.5 rounded-full hover:bg-white/20 transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+              {playlists.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-sm font-bold text-white/40">No playlists yet</p>
+                  <p className="text-xs text-white/25 mt-1">Create a playlist in your Library first</p>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {playlists.map((playlist) => {
+                    const isAdded = addedToPlaylistId === playlist.id;
+                    return (
+                      <div
+                        key={playlist.id}
+                        onClick={async () => {
+                          if (isAdded) return;
+                          await addTrack(playlist.id!, track);
+                          setAddedToPlaylistId(playlist.id!);
+                        }}
+                        className={`flex items-center justify-between p-4 rounded-2xl cursor-pointer transition-all ${
+                          isAdded
+                            ? 'bg-brand-green/10 border border-brand-green/30'
+                            : 'bg-white/5 border border-transparent hover:bg-white/10'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-800 to-cyan-500 flex items-center justify-center">
+                            <Music2 size={16} className="text-white/80" />
+                          </div>
+                          <p className={`text-[14px] font-semibold ${isAdded ? 'text-brand-green' : 'text-white/80'}`}>
+                            {playlist.title}
+                          </p>
+                        </div>
+                        {isAdded && (
+                          <motion.div
+                            initial={{ scale: 0.5, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="w-5 h-5 rounded-full bg-brand-green flex items-center justify-center"
+                          >
+                            <Check size={11} strokeWidth={3} className="text-black" />
+                          </motion.div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
     </motion.div>
   );
 }

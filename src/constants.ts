@@ -35,6 +35,8 @@ export const ADDONS: AddOn[] = [
   { id: '2', name: 'Jellyfin', description: 'Stream from your Jellyfin server', icon: 'jellyfin', isInstalled: false, isEnabled: false, type: 'source', color: 'text-purple-500' },
   //{ id: 'youtube', name: 'YouTube Music', description: 'Stream any song via YouTube. No account required.', icon: 'youtube', isInstalled: false, isEnabled: false, type: 'source', color: 'text-red-600' },
   { id: '4', name: 'Radio Browser', description: 'Explore thousands of radio stations', icon: 'radio', isInstalled: false, isEnabled: false, type: 'source', color: 'text-cyan-400' },
+  { id: 'internetarchive', name: 'Internet Archive', description: 'Live concert recordings — search any artist name.', icon: 'archive', isInstalled: false, isEnabled: false, type: 'source', color: 'text-yellow-500' },
+  { id: 'spotify', name: 'Spotify', description: 'Coming soon — playlist import via OAuth. Deploy to HTTPS to enable.', icon: 'spotify', isInstalled: false, isEnabled: false, type: 'source', color: 'text-green-500/40' },
   { id: '5', name: 'SoundCloud', description: 'Search and play SoundCloud tracks', icon: 'soundcloud', isInstalled: false, isEnabled: false, type: 'source', color: 'text-orange-500' },
   // Tool Add-ons
   { id: '6', name: 'Last.fm', description: 'Scrobble and discover with Last.fm', icon: 'lastfm', isInstalled: false, isEnabled: false, type: 'tool', color: 'text-red-600' },

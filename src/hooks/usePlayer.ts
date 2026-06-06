@@ -3,6 +3,7 @@ import { Howl } from 'howler';
 import { usePlayerStore } from '../Store/playerStore';
 import { AudiusAddon } from '../addons/audius';
 import { RadioAddon } from '../addons/radio'; 
+import { InternetArchiveAddon } from '../addons/internetarchive';
 //import { YouTubeAddon } from '../addons/youtube';
 
 /**
@@ -73,6 +74,9 @@ export function usePlayer() {
             break;
             case 'Radio Browser':
               url = await RadioAddon.getStreamUrl(currentTrack!.id);
+              break;
+            case 'Internet Archive':
+              url = await InternetArchiveAddon.getStreamUrl(currentTrack!.id);
               break;
             //case 'YouTube':
              // url = await YouTubeAddon.getStreamUrl(currentTrack!.id);

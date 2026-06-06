@@ -12,6 +12,7 @@ import { RadioAddon }  from '../addons/radio';
 //import { YouTubeAddon } from '../addons/youtube';
 import { useAddonStore } from '../Store/addonStore';
 import { usePlayTrack } from '../hooks/usePlayTrack';
+import { InternetArchiveAddon } from '../addons/internetarchive';
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
@@ -62,7 +63,7 @@ interface SearchScreenProps {
   onPlayTrack?: (track: Track) => void;
 }
 
-type SourceFilter = 'all' | 'audius' | 'radio';
+type SourceFilter = 'all' | 'audius' | 'radio' | 'internetarchive';
 type TypeFilter   = 'all' | 'tracks' | 'live';
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -96,6 +97,7 @@ export default function SearchScreen({ onPlayTrack }: SearchScreenProps) {
   const filteredTracks = (searchQuery.trim() ? results : MOCK_TRACK_DATABASE).filter((t) => {
     if (sourceFilter === 'audius' && t.source !== 'Audius') return false;
     if (sourceFilter === 'radio'  && t.source !== 'Radio Browser') return false;
+    if (sourceFilter === 'internetarchive' && t.source !== 'Internet Archive') return false;
     if (typeFilter   === 'live'   && t.duration !== 'LIVE') return false;
     if (typeFilter   === 'tracks' && t.duration === 'LIVE') return false;
     return true;
@@ -113,8 +115,9 @@ export default function SearchScreen({ onPlayTrack }: SearchScreenProps) {
         const all: Track[] = [];
         if (isEnabled('aether.audius')) all.push(...await AudiusAddon.search(searchQuery));
         if (isEnabled('aether.radio'))  all.push(...await RadioAddon.search(searchQuery));
+        if (isEnabled('aether.archive')) all.push(...await InternetArchiveAddon.search(searchQuery));
         //if (isEnabled('aether.youtube')) all.push(...await YouTubeAddon.search(searchQuery));
-        if (!all.length) setSearchError('No sources connected. Go to Add-ons and install Audius or Radio Browser.');
+        if (!all.length) setSearchError('No sources connected. Go to Add-ons and install Audius, Radio Browser or Internet Archive.');
         setResults(all);
       } catch (err) {
         setSearchError(err instanceof Error ? err.message : 'Search failed');

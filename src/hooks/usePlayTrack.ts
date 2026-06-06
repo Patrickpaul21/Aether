@@ -15,6 +15,7 @@ import { usePlayerStore } from '../Store/playerStore';
 import { SoundCloudAddon } from '../addons/soundcloud';
 import { AudiusAddon } from '../addons/audius';
 import { RadioAddon } from '../addons/radio';
+import { InternetArchiveAddon } from '../addons/internetarchive';
 
 export function usePlayTrack() {
   const { setTrack } = usePlayerStore();
@@ -35,13 +36,17 @@ export function usePlayTrack() {
       let streamUrl: string;
 
       // Route to the correct addon based on track.source
+      
       switch (track.source) {
         case 'Audius':
           streamUrl = await AudiusAddon.getStreamUrl(track.id);
           break;
-        case 'SoundCloud':
-          streamUrl = await SoundCloudAddon.getStreamUrl(track.id);
-          break;
+          case 'SoundCloud':
+            streamUrl = await SoundCloudAddon.getStreamUrl(track.id);
+            break;
+          case 'Internet Archive':
+            streamUrl = await InternetArchiveAddon.getStreamUrl(track.id);
+            break;
         case 'Radio Browser':
           streamUrl = await RadioAddon.getStreamUrl(track.id);
           break;

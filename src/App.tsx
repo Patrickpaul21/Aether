@@ -11,11 +11,27 @@ import SettingsScreen from './screens/SettingsScreen';
 import NowPlayingScreen from './screens/NowPlayingScreen';
 import { usePlayer } from './hooks/usePlayer';
 import { usePlayerStore } from './Store/playerStore';
+import { useEffect } from 'react';
 import React from 'react';
+import { saveToken } from './addons/spotify/index';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
+
+  // Handle Spotify OAuth callback
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token')) {
+      const params = new URLSearchParams(hash.substring(1));
+      const token = params.get('access_token');
+      if (token) {
+        saveToken(token);
+        window.location.hash = '';
+        setActiveTab('library');
+      }
+    }
+  }, []);
 
   // Mount the Howler audio engine once at the app root
   const { seek } = usePlayer();
