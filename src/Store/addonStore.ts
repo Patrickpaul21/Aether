@@ -21,7 +21,11 @@ interface AddonState {
 export const useAddonStore = create<AddonState>()(
   persist(
     (set, get) => ({
-      installed: {},
+      installed: {
+        'aether.audius': { isEnabled: true, config: {}, installedAt: Date.now() },
+        'aether.radio': { isEnabled: true, config: {}, installedAt: Date.now() },
+        'aether.archive': { isEnabled: true, config: {}, installedAt: Date.now() },
+      },
 
       install: (addonId, config = {}) =>
         set((state) => ({
