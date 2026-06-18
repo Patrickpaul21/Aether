@@ -4,7 +4,8 @@ import { usePlayerStore } from '../Store/playerStore';
 import { AudiusAddon } from '../addons/audius';
 import { RadioAddon } from '../addons/radio'; 
 import { InternetArchiveAddon } from '../addons/internetarchive';
-//import { YouTubeAddon } from '../addons/youtube';
+import { YouTubeAddon } from '../addons/youtube';
+import { ItunesAddon } from '../addons/itunes';
 
 /**
  * usePlayer — audio engine.
@@ -78,10 +79,12 @@ export function usePlayer() {
             case 'Internet Archive':
               url = await InternetArchiveAddon.getStreamUrl(currentTrack!.id);
               break;
-            //case 'YouTube':
-             // url = await YouTubeAddon.getStreamUrl(currentTrack!.id);
-              //break;
-          // case 'YouTube': url = await YouTubeAddon.getStreamUrl(...); break;
+            case 'YouTube':
+              url = await YouTubeAddon.getStreamUrl(currentTrack!.id);
+              break;
+              case 'iTunes':
+               url = await ItunesAddon.getStreamUrl(currentTrack!.id);
+              break;
           default:
             console.warn('[Aether] No addon found for source:', currentTrack!.source);
             return;
@@ -128,10 +131,34 @@ export function usePlayer() {
             case 'Radio Browser':
               url = await RadioAddon.getStreamUrl(nextTrack.id);
               break;
+            case 'Internet Archive':
+              url = await InternetArchiveAddon.getStreamUrl(nextTrack.id);
+              break;
+            case 'YouTube':
+              url = await YouTubeAddon.getStreamUrl(nextTrack.id);
+              break;
+            case 'iTunes':
+              url = await ItunesAddon.getStreamUrl(nextTrack.id);
+              break;
             default:
               return;
           }
           updateStreamUrl(nextTrack.id, url);
+
+          if (offset === 1) {
+            const resolvedTrack = usePlayerStore.getState().queue[
+              (currentIndex + 1) % queue.length
+            ];
+            if (!resolvedTrack?.streamUrl) return;
+            if (preloadHowlRef.current) preloadHowlRef.current.unload();
+            preloadHowlRef.current = new Howl({
+              src: [resolvedTrack.streamUrl],
+              html5: true,
+              volume: 0,
+              format: ['mp3', 'ogg', 'aac', 'opus'],
+              preload: true,
+            });
+          }
         } catch (err) {
           console.warn('[Aether] Pre-resolve failed for', nextTrack.id, err);
         } finally {
@@ -140,23 +167,6 @@ export function usePlayer() {
       }
 
       preResolve();
-      // Pre-load Howler for the very next track once URL is resolved
-if (offset === 1) {
-  preResolve().then(() => {
-    const resolvedTrack = usePlayerStore.getState().queue[
-      (currentIndex + 1) % queue.length
-    ];
-    if (!resolvedTrack?.streamUrl) return;
-    if (preloadHowlRef.current) preloadHowlRef.current.unload();
-    preloadHowlRef.current = new Howl({
-      src: [resolvedTrack.streamUrl],
-      html5: true,
-      volume: 0,
-      format: ['mp3', 'ogg', 'aac', 'opus'],
-      preload: true,
-    });
-  });
-}
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTrack?.id]);

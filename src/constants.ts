@@ -33,7 +33,7 @@ export const ADDONS: AddOn[] = [
   },
   { id: '1', name: 'Navidrome', description: 'Access your Navidrome server', icon: 'navidrome', isInstalled: true, isEnabled: true, type: 'source', color: 'text-brand-green' },
   { id: '2', name: 'Jellyfin', description: 'Stream from your Jellyfin server', icon: 'jellyfin', isInstalled: false, isEnabled: false, type: 'source', color: 'text-purple-500' },
-  //{ id: 'youtube', name: 'YouTube Music', description: 'Stream any song via YouTube. No account required.', icon: 'youtube', isInstalled: false, isEnabled: false, type: 'source', color: 'text-red-600' },
+  { id: 'youtube', name: 'YouTube Music', description: 'Stream any song via YouTube. No account required.', icon: 'youtube', isInstalled: false, isEnabled: false, type: 'source', color: 'text-red-600' },
   { id: '4', name: 'Radio Browser', description: 'Explore thousands of radio stations', icon: 'radio', isInstalled: false, isEnabled: false, type: 'source', color: 'text-cyan-400' },
   { id: 'internetarchive', name: 'Internet Archive', description: 'Live concert recordings — search any artist name.', icon: 'archive', isInstalled: false, isEnabled: false, type: 'source', color: 'text-yellow-500' },
   { id: 'spotify', name: 'Spotify', description: 'Coming soon — playlist import via OAuth. Deploy to HTTPS to enable.', icon: 'spotify', isInstalled: false, isEnabled: false, type: 'source', color: 'text-green-500/40' },
@@ -43,7 +43,17 @@ export const ADDONS: AddOn[] = [
   // Theme Add-ons (Visual changes)
   { id: 'theme-oled', name: 'OLED Black Theme', description: 'Ultra-dark pure black UI theme for OLED displays', icon: 'palette', isInstalled: true, isEnabled: true, type: 'theme', color: 'text-neutral-200' },
   { id: 'theme-cosmic', name: 'Cosmic Nebula Theme', description: 'Galactic dark purple theme with stellar accents', icon: 'palette', isInstalled: true, isEnabled: true, type: 'theme', color: 'text-indigo-400' },
-  { id: 'theme-obsidian', name: 'Obsidian Theme', description: 'Volcanic glass sleek gray theme layout', icon: 'palette', isInstalled: true, isEnabled: true, type: 'theme', color: 'text-slate-400' }
+  { id: 'theme-obsidian', name: 'Obsidian Theme', description: 'Volcanic glass sleek gray theme layout', icon: 'palette', isInstalled: true, isEnabled: true, type: 'theme', color: 'text-slate-400' },
+  {
+    id: 'itunes',
+    name: 'iTunes Preview',
+    description: '30-second previews from Apple Music. 100M+ tracks, no account needed.',
+    icon: 'itunes',
+    isInstalled: false,
+    isEnabled: false,
+    type: 'source',
+    color: 'text-pink-400',
+  },
 ];
 
 export const TEST_TRACK: Track = {

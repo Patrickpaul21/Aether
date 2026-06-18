@@ -7,7 +7,10 @@ import {
   deletePlaylist, 
   addTrackToPlaylist, 
   removeTrackFromPlaylist,
-  getPlaylistTracks 
+  getPlaylistTracks,
+  ensureLikedSongsPlaylist,
+  toggleLikedSong,
+  isTrackLiked,
 } from '../db/database';
 
 interface PlaylistState {
@@ -21,6 +24,9 @@ interface PlaylistState {
   addTrack: (playlistId: number, track: Track) => Promise<void>;
   removeTrack: (playlistId: number, trackId: string) => Promise<void>;
   getPlaylistTracks: (playlistId: number) => Promise<Track[]>;
+  ensureLikedSongs: () => Promise<void>;
+  toggleLiked: (track: Track) => Promise<boolean>;
+  isLiked: (trackId: string) => Promise<boolean>;
 }
 
 export const usePlaylistStore = create<PlaylistState>((set, get) => ({
@@ -54,5 +60,20 @@ export const usePlaylistStore = create<PlaylistState>((set, get) => ({
 
   getPlaylistTracks: async (playlistId) => {
     return await getPlaylistTracks(playlistId);
+  },
+  ensureLikedSongs: async () => {
+    await ensureLikedSongsPlaylist();
+    await get().loadPlaylists();
+  },
+
+  toggleLiked: async (track) => {
+    await ensureLikedSongsPlaylist();
+    const result = await toggleLikedSong(track);
+    await get().loadPlaylists();
+    return result;
+  },
+
+  isLiked: async (trackId) => {
+    return await isTrackLiked(trackId);
   },
 }));

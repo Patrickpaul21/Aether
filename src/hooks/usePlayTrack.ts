@@ -16,6 +16,8 @@ import { SoundCloudAddon } from '../addons/soundcloud';
 import { AudiusAddon } from '../addons/audius';
 import { RadioAddon } from '../addons/radio';
 import { InternetArchiveAddon } from '../addons/internetarchive';
+import { YouTubeAddon } from '../addons/youtube';
+import { ItunesAddon } from '../addons/itunes/index';
 
 export function usePlayTrack() {
   const { setTrack } = usePlayerStore();
@@ -50,10 +52,13 @@ export function usePlayTrack() {
         case 'Radio Browser':
           streamUrl = await RadioAddon.getStreamUrl(track.id);
           break;
-        // YouTube case goes here later:
-        // case 'YouTube':
-        //   streamUrl = await YouTubeAddon.getStreamUrl(track.id);
-        //   break;
+
+          case 'iTunes':
+          streamUrl = track.streamUrl || await ItunesAddon.getStreamUrl(track.id);
+          break;
+        case 'YouTube':
+          streamUrl = await YouTubeAddon.getStreamUrl(track.id);
+          break;
         default:
           throw new Error(`No addon found for source: ${track.source}`);
       }

@@ -84,3 +84,68 @@ export async function getPlaylistTracks(playlistId: number): Promise<Track[]> {
   
   return playlistTracks.map(pt => pt.track);
 }
+export async function ensureLikedSongsPlaylist(): Promise<number> {
+  const existing = await db.playlists
+    .where('title')
+    .equals('Liked Songs')
+    .first();
+  
+  if (existing?.id) return existing.id;
+
+  return await db.playlists.add({
+    title: 'Liked Songs',
+    description: 'Your liked tracks',
+    createdAt: 0, // 0 = always sorts first
+    updatedAt: Date.now(),
+  });
+}
+
+export async function toggleLikedSong(track: Track): Promise<boolean> {
+  const playlist = await db.playlists
+    .where('title')
+    .equals('Liked Songs')
+    .first();
+  
+  if (!playlist?.id) return false;
+
+  const existing = await db.playlistTracks
+    .where('playlistId')
+    .equals(playlist.id)
+    .filter(pt => pt.track.id === track.id)
+    .first();
+
+  if (existing) {
+    await db.playlistTracks.delete(existing.id!);
+    return false; // unliked
+  } else {
+    const count = await db.playlistTracks
+      .where('playlistId')
+      .equals(playlist.id)
+      .count();
+    
+    await db.playlistTracks.add({
+      playlistId: playlist.id,
+      track,
+      addedAt: Date.now(),
+      order: count,
+    });
+    return true; // liked
+  }
+}
+
+export async function isTrackLiked(trackId: string): Promise<boolean> {
+  const playlist = await db.playlists
+    .where('title')
+    .equals('Liked Songs')
+    .first();
+  
+  if (!playlist?.id) return false;
+
+  const existing = await db.playlistTracks
+    .where('playlistId')
+    .equals(playlist.id)
+    .filter(pt => pt.track.id === trackId)
+    .first();
+
+  return !!existing;
+}

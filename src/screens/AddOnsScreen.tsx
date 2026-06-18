@@ -367,6 +367,7 @@ function getIcon(icon: string, color?: string) {
     case 'radio':       return <Radio     className={cls} size={22} />;
     case 'archive':     return <span className={`font-black text-sm ${cls}`}>IA</span>;
     case 'spotify': return <span className={`font-black text-sm ${cls}`}>♫</span>;
+    case 'itunes':      return <span className={`font-black text-sm ${cls}`}>IT</span>;
     case 'soundcloud':  return <Music2    className={cls} size={22} />;
     case 'lastfm':      return <span className={`font-black text-lg italic leading-none ${cls}`}>as</span>;
     default:            return <LayoutGrid className={cls} size={22} />;

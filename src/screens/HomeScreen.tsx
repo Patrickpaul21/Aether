@@ -8,8 +8,6 @@ import { AudiusAddon } from '../addons/audius';
 interface HomeScreenProps {
   onPlayTrack?: (track: Track, queue?: Track[]) => void;
 }
-
-// ── Dynamic greeting based on time of day ────────────────────────────────────
 function getGreeting(): string {
   const h = new Date().getHours();
   if (h < 12) return 'Good morning';
@@ -18,7 +16,7 @@ function getGreeting(): string {
   return 'Good night';
 }
 
-export default function HomeScreen(_: HomeScreenProps) {
+export default function HomeScreen({ onPlayTrack }: HomeScreenProps) {
   const [trending,     setTrending]     = useState<Track[]>([]);
   const [loadingTrend, setLoadingTrend] = useState(false);
 
@@ -43,9 +41,15 @@ export default function HomeScreen(_: HomeScreenProps) {
   }, [audiusConnected]);
 
   const handlePlay = (track: Track, queue: Track[]) => {
-    // Keep queue entries clean; usePlayer resolves stream URLs on demand.
     const clean = (t: Track): Track => ({ ...t, streamUrl: undefined });
-    setTrack(clean(track), queue.map(clean));
+    const cleanTrack = clean(track);
+    const cleanQueue = queue.map(clean);
+
+    if (onPlayTrack) {
+      onPlayTrack(cleanTrack, cleanQueue);
+      return;
+    }
+    setTrack(cleanTrack, cleanQueue);
   };
 
   // "Continue listening" — trending if no history yet, otherwise history

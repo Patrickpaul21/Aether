@@ -14,12 +14,18 @@ import { usePlayerStore } from './Store/playerStore';
 import { useEffect } from 'react';
 import React from 'react';
 import { saveToken } from './addons/spotify/index';
+import { usePlaylistStore } from './Store/playliststore';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
 
   // Handle Spotify OAuth callback
+ // Ensure Liked Songs playlist exists on app load
+ const { ensureLikedSongs } = usePlaylistStore();
+ useEffect(() => {
+   ensureLikedSongs();
+ }, []);
   useEffect(() => {
     const hash = window.location.hash;
     if (hash && hash.includes('access_token')) {
@@ -41,12 +47,14 @@ export default function App() {
   const currentTime = usePlayerStore((s) => s.currentTime);
   const duration = usePlayerStore((s) => s.duration);
   const togglePlay = usePlayerStore((s) => s.togglePlay);
+  const next = usePlayerStore((s) => s.next);
   const setTrack = usePlayerStore((s) => s.setTrack);
 
   const displayTrack = currentTrack ?? CURRENTLY_PLAYING;
 
-  const handlePlayTrack = (track: Track) => {
-    setTrack(track);
+  const handlePlayTrack = (track: Track, queue?: Track[]) => {
+    const clean = (t: Track): Track => ({ ...t, streamUrl: undefined });
+    setTrack(clean(track), queue?.map(clean));
   };
 
   const renderScreen = () => {
@@ -105,9 +113,11 @@ export default function App() {
               >
                 {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />}
               </button>
-              <button className="text-white hover:text-brand-green transition-colors">
-                <SkipForward size={20} fill="currentColor" />
-              </button>
+              <button 
+                  onClick={() => currentTrack && next()}
+                   className="text-white hover:text-brand-green transition-colors">
+                   <SkipForward size={20} fill="currentColor" />
+                </button>
             </div>
             {/* Progress Bar */}
             <div className="absolute bottom-0 left-2 right-2 h-[2px] bg-white/20 rounded-full overflow-hidden">

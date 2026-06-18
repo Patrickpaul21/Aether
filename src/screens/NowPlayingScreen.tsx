@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Track } from '../types';
 import { usePlayerStore } from '../Store/playerStore';
 import { usePlaylistStore } from '../Store/playliststore';
+import { getLyrics, LyricLine } from '../addons/lyrics/lrclib';
 
 interface NowPlayingProps {
   track: Track;
@@ -14,11 +15,11 @@ interface NowPlayingProps {
 }
 
 type ViewMode = 'artwork' | 'lyrics' | 'queue';
-interface LyricLine { text: string; time: number; }
 
 export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClose, seek }: NowPlayingProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('artwork');
   const [isStarred, setIsStarred] = useState(false);
+  const { toggleLiked, isLiked } = usePlaylistStore();
   const [isShuffle, setIsShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
   const [prevVolume, setPrevVolume] = useState(70);
@@ -40,34 +41,33 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
   const lyricsContainerRef = useRef<HTMLDivElement>(null);
   const activeLyricRef = useRef<HTMLParagraphElement>(null);
 
-  useEffect(() => { loadPlaylists(); }, []);
+  useEffect(() => { 
+    loadPlaylists();
+    isLiked(track.id).then(setIsStarred);
+  }, [track.id]);
 
-  const lyricsLines: LyricLine[] = [
-    { time: 0, text: "Searching for the signal in the static" },
-    { time: 10, text: "Fragments of a world we used to know" },
-    { time: 20, text: "The baseline pulses like a heartbeat" },
-    { time: 30, text: "Moving where the silver shadows go" },
-    { time: 40, text: "Protocol initiated, eyes wide open" },
-    { time: 50, text: "System override, no turning back" },
-    { time: 60, text: "Digital remnants of an ancient song" },
-    { time: 70, text: "Echoing through the corridors of time" },
-    { time: 80, text: "Everything is numbers, silver light" },
-    { time: 100, text: "Moving through the middle of the night" },
-    { time: 120, text: "Eclipse Protocol, set it in motion" },
-    { time: 130, text: "Deep dive into the digital ocean" },
-    { time: 140, text: "Lines of code, rewriting history" },
-    { time: 150, text: "Unraveling the ultimate mystery" },
-    { time: 160, text: "Zeroes and ones in a perfect line" },
-    { time: 170, text: "Infinite loops in a vast design" },
-    { time: 180, text: "The signal fades into the blue" },
-    { time: 190, text: "Starting over, starting brand new" },
-  ];
+  const [lyricsLines, setLyricsLines] = useState<LyricLine[]>([]);
+  const [lyricsLoading, setLyricsLoading] = useState(false);
+  const [lyricsError, setLyricsError] = useState(false);
+  
+  useEffect(() => {
+    setLyricsLines([]);
+    setLyricsError(false);
+    if (viewMode !== 'lyrics') return;
+    setLyricsLoading(true);
+    getLyrics(track.title, track.artist, duration || undefined)
+      .then(lines => {
+        setLyricsLines(lines);
+        setLyricsError(lines.length === 0);
+      })
+      .finally(() => setLyricsLoading(false));
+  }, [track.id, viewMode]);
 
   useEffect(() => {
     if (viewMode === 'lyrics' && activeLyricRef.current) {
       activeLyricRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-  }, [currentTime, viewMode]);
+  }, [currentTime, viewMode, lyricsLines]);
 
   useEffect(() => {
     if (isFirstRender.current) { isFirstRender.current = false; return; }
@@ -80,8 +80,9 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
   const formatTime = (s: number) =>
     `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
-  const currentLyricIndex = [...lyricsLines].reverse().findIndex(l => currentTime >= l.time);
-  const activeIndex = currentLyricIndex !== -1 ? lyricsLines.length - 1 - currentLyricIndex : 0;
+  const adjustedTime = currentTime + 0.5;
+const currentLyricIndex = [...lyricsLines].reverse().findIndex(l => adjustedTime >= l.time);
+const activeIndex = currentLyricIndex !== -1 ? lyricsLines.length - 1 - currentLyricIndex : 0;
 
   const handleDownload = (trackId: string) => {
     if (downloadStates[trackId] === 'downloaded') { setDownloadStates(p => ({ ...p, [trackId]: 'idle' })); return; }
@@ -197,7 +198,10 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
                     <p className="text-[15px] text-white/50 font-medium truncate mt-0.5">{track.artist}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <button onClick={() => setIsStarred(!isStarred)}
+                  <button onClick={async () => {
+  const result = await toggleLiked(track);
+  setIsStarred(result);
+}}
                       className={`w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90 ${isStarred ? 'text-white' : 'text-white/40'}`}>
                       <Star size={20} fill={isStarred ? 'currentColor' : 'none'} />
                     </button>
@@ -320,15 +324,27 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
                   </button>
                 </div>
                 <div ref={lyricsContainerRef} className="flex-1 overflow-y-auto no-scrollbar space-y-10 scroll-smooth pb-28">
-                  {lyricsLines.map((line, i) => (
-                    <p key={i} ref={i === activeIndex ? activeLyricRef : null}
-                      className={`text-[34px] font-black leading-tight tracking-tight transition-all duration-700 ${
-                        i === activeIndex ? 'text-white opacity-100'
-                        : i < activeIndex ? 'text-white/15 opacity-30'
-                        : 'text-white/25 opacity-60'}`}>
-                      {line.text}
-                    </p>
-                  ))}
+  {lyricsLoading ? (
+    <div className="flex items-center justify-center gap-2 py-16 text-white/40 text-sm">
+      <Loader2 size={18} className="animate-spin" /> Finding lyrics…
+    </div>
+  ) : lyricsError ? (
+    <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+      <MessageSquareText size={32} className="text-white/20 mb-3" />
+      <p className="text-sm font-bold text-white/40">No lyrics found</p>
+      <p className="text-xs text-white/25 mt-1">Try a different track</p>
+    </div>
+  ) : (
+    lyricsLines.map((line, i) => (
+      <p key={i} ref={i === activeIndex ? activeLyricRef : null}
+        className={`text-[34px] font-black leading-tight tracking-tight transition-all duration-700 ${
+          i === activeIndex ? 'text-white opacity-100'
+          : i < activeIndex ? 'text-white/15 opacity-30'
+          : 'text-white/25 opacity-60'}`}>
+        {line.text}
+      </p>
+    ))
+  )}
                 </div>
               </motion.div>
             )}

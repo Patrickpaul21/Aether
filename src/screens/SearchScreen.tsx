@@ -9,10 +9,11 @@ import { Track } from '../types';
 import { RECENT_SEARCHES } from '../constants';
 import { AudiusAddon } from '../addons/audius/index';
 import { RadioAddon }  from '../addons/radio';
-//import { YouTubeAddon } from '../addons/youtube';
+import { YouTubeAddon } from '../addons/youtube';
 import { useAddonStore } from '../Store/addonStore';
 import { usePlayTrack } from '../hooks/usePlayTrack';
 import { InternetArchiveAddon } from '../addons/internetarchive';
+import { ItunesAddon } from '../addons/itunes/index';
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
@@ -63,7 +64,7 @@ interface SearchScreenProps {
   onPlayTrack?: (track: Track) => void;
 }
 
-type SourceFilter = 'all' | 'audius' | 'radio' | 'internetarchive';
+type SourceFilter = 'all' | 'audius' | 'radio' | 'internetarchive' | 'itunes';
 type TypeFilter   = 'all' | 'tracks' | 'live';
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -100,6 +101,7 @@ export default function SearchScreen({ onPlayTrack }: SearchScreenProps) {
     if (sourceFilter === 'internetarchive' && t.source !== 'Internet Archive') return false;
     if (typeFilter   === 'live'   && t.duration !== 'LIVE') return false;
     if (typeFilter   === 'tracks' && t.duration === 'LIVE') return false;
+    if (sourceFilter === 'itunes' && t.source !== 'iTunes') return false;
     return true;
   });
 
@@ -116,8 +118,9 @@ export default function SearchScreen({ onPlayTrack }: SearchScreenProps) {
         if (isEnabled('aether.audius')) all.push(...await AudiusAddon.search(searchQuery));
         if (isEnabled('aether.radio'))  all.push(...await RadioAddon.search(searchQuery));
         if (isEnabled('aether.archive')) all.push(...await InternetArchiveAddon.search(searchQuery));
-        //if (isEnabled('aether.youtube')) all.push(...await YouTubeAddon.search(searchQuery));
-        if (!all.length) setSearchError('No sources connected. Go to Add-ons and install Audius, Radio Browser or Internet Archive.');
+        if (isEnabled('aether.youtube')) all.push(...await YouTubeAddon.search(searchQuery));
+        if (isEnabled('aether.itunes')) all.push(...await ItunesAddon.search(searchQuery));
+        if (!all.length) setSearchError('No sources connected. Go to Add-ons and install a source.');
         setResults(all);
       } catch (err) {
         setSearchError(err instanceof Error ? err.message : 'Search failed');
@@ -202,19 +205,19 @@ export default function SearchScreen({ onPlayTrack }: SearchScreenProps) {
                 <div className="mt-3 flex flex-col gap-2">
                   {/* Source row */}
                   <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                  {(['all', 'audius', 'radio', ''] as SourceFilter[]).map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => setSourceFilter(s)}
-                        className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider whitespace-nowrap transition-all ${
-                          sourceFilter === s
-                            ? 'bg-brand-green text-black'
-                            : 'bg-white/[0.06] border border-white/[0.08] text-white/50 hover:text-white'
-                        }`}
+                  {(['all', 'audius', 'radio', 'internetarchive', 'itunes'] as SourceFilter[]).map((s) => (
+                   <button
+                   key={s}
+                   onClick={() => setSourceFilter(s)}
+                   className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider whitespace-nowrap transition-all ${
+                     sourceFilter === s
+                     ? 'bg-brand-green text-black'
+                         : 'bg-white/[0.06] border border-white/[0.08] text-white/50 hover:text-white'
+                     }`}
                       >
-                        {s === 'all' ? 'All Sources' : s === 'audius' ? 'Audius' : 'Radio'}
-                      </button>
-                    ))}
+                    {s === 'all' ? 'All Sources' : s === 'audius' ? 'Audius' : s === 'radio' ? 'Radio' : s === 'internetarchive' ? 'Archive' : 'iTunes'}
+                    </button>
+                      ))}
                   </div>
                   {/* Type row */}
                   <div className="flex gap-2">
