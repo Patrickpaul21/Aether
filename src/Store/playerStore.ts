@@ -64,14 +64,23 @@ export const usePlayerStore = create<PlayerState>()(
       // Writes the resolved stream URL into both currentTrack and the queue entry.
       // Triggered by usePlayer after it resolves the URL for a skipped track.
       updateStreamUrl: (trackId, url) =>
-        set((state) => ({
-          currentTrack: state.currentTrack?.id === trackId
-            ? { ...state.currentTrack, streamUrl: url }
-            : state.currentTrack,
-          queue: state.queue.map((t) =>
-            t.id === trackId ? { ...t, streamUrl: url } : t
-          ),
-        })),
+        set((state) => {
+          const targetTrack =
+            state.currentTrack?.id === trackId
+              ? state.currentTrack
+              : state.queue.find((t) => t.id === trackId);
+          const isJioSaavn = targetTrack?.source === 'JioSaavn';
+
+          return {
+            currentTrack: state.currentTrack?.id === trackId
+              ? { ...state.currentTrack, streamUrl: url }
+              : state.currentTrack,
+            // Don't cache JioSaavn URLs in queue — they expire
+            queue: isJioSaavn
+              ? state.queue
+              : state.queue.map((t) => t.id === trackId ? { ...t, streamUrl: url } : t),
+          };
+        }),
 
       setPlaying:     (playing) => set({ isPlaying: playing }),
       togglePlay:     ()        => set((s) => ({ isPlaying: !s.isPlaying })),
@@ -85,30 +94,39 @@ export const usePlayerStore = create<PlayerState>()(
           volume:  s.isMuted ? (s.volume === 0 ? 0.5 : s.volume) : 0,
         })),
 
-      next: () => {
-        const { queue, currentIndex } = get();
-        if (!queue.length) return;
-        const nextIndex = (currentIndex + 1) % queue.length;
-        set({
-          currentTrack: queue[nextIndex],
-          currentIndex: nextIndex,
-          currentTime:  0,
-          isPlaying:    true,
-        });
-      },
+        next: () => {
+          const { queue, currentIndex } = get();
+          if (!queue.length) return;
+          const nextIndex = (currentIndex + 1) % queue.length;
+          const nextTrack = queue[nextIndex];
+          // Clear streamUrl for JioSaavn — tokens expire quickly
+          const cleanTrack = nextTrack.source === 'JioSaavn' 
+            ? { ...nextTrack, streamUrl: undefined }
+            : nextTrack;
+          set({
+            currentTrack: cleanTrack,
+            currentIndex: nextIndex,
+            currentTime: 0,
+            isPlaying: true,
+          });
+        },
 
-      prev: () => {
-        const { queue, currentIndex, currentTime } = get();
-        if (!queue.length) return;
-        if (currentTime > 3) { set({ currentTime: 0 }); return; }
-        const prevIndex = currentIndex <= 0 ? queue.length - 1 : currentIndex - 1;
-        set({
-          currentTrack: queue[prevIndex],
-          currentIndex: prevIndex,
-          currentTime:  0,
-          isPlaying:    true,
-        });
-      },
+       prev: () => {
+          const { queue, currentIndex } = get();
+          if (!queue.length) return;
+          const prevIndex = (currentIndex - 1 + queue.length) % queue.length;
+          const prevTrack = queue[prevIndex];
+          // Clear streamUrl for JioSaavn — tokens expire quickly
+          const cleanTrack = prevTrack.source === 'JioSaavn' 
+            ? { ...prevTrack, streamUrl: undefined }
+            : prevTrack;
+          set({
+            currentTrack: cleanTrack,
+            currentIndex: prevIndex,
+            currentTime: 0,
+            isPlaying: true,
+          });
+        },
 
       addToQueue: (track) =>
         set((s) => ({ queue: [...s.queue, track] })),

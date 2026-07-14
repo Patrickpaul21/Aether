@@ -18,6 +18,13 @@ export default defineConfig(({mode}) => {
     server: {
       hmr: process.env.DISABLE_HMR !== 'true',
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      proxy: {
+        '/jiosaavn': {
+          target: 'https://www.jiosaavn.com',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/jiosaavn/, ''),
+        },
+      },
     },
   };
 });

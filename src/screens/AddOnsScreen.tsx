@@ -360,16 +360,17 @@ export default function AddOnsScreen() {
 function getIcon(icon: string, color?: string) {
   const cls = color ?? 'text-white/50';
   switch (icon) {
-    case 'audius': return <span className="font-black text-lg text-white/70">◈</span>;
-    case 'navidrome':   return <Server    className={cls} size={22} />;
-    case 'jellyfin':    return <Disc      className={cls} size={22} />;
-    case 'youtube':     return <Youtube   className={cls} size={22} />;
-    case 'radio':       return <Radio     className={cls} size={22} />;
-    case 'archive':     return <span className={`font-black text-sm ${cls}`}>IA</span>;
-    case 'spotify': return <span className={`font-black text-sm ${cls}`}>♫</span>;
-    case 'itunes':      return <span className={`font-black text-sm ${cls}`}>IT</span>;
-    case 'soundcloud':  return <Music2    className={cls} size={22} />;
-    case 'lastfm':      return <span className={`font-black text-lg italic leading-none ${cls}`}>as</span>;
-    default:            return <LayoutGrid className={cls} size={22} />;
+    case 'audius':     return <span className="font-black text-lg text-white/70">◈</span>;
+    case 'navidrome':  return <Server    className={cls} size={22} />;
+    case 'jellyfin':   return <Disc      className={cls} size={22} />;
+    case 'youtube':    return <Youtube   className={cls} size={22} />;
+    case 'radio':      return <Radio     className={cls} size={22} />;
+    case 'archive':    return <span className={`font-black text-sm ${cls}`}>IA</span>;
+    case 'spotify':    return <span className={`font-black text-sm ${cls}`}>♫</span>;
+    case 'itunes':     return <span className={`font-black text-sm ${cls}`}>IT</span>;
+    case 'soundcloud': return <Music2    className={cls} size={22} />;
+    case 'jiosaavn':   return <span className={`font-black text-sm ${cls}`}>JS</span>;
+    case 'lastfm':     return <span className={`font-black text-lg italic leading-none ${cls}`}>as</span>;
+    default:           return <LayoutGrid className={cls} size={22} />;
   }
 }

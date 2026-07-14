@@ -2,7 +2,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 @import "tailwindcss";
 
-@theme {
+@theme { /* Default theme */  
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Share Tech Mono", ui-monospace, monospace;
 
@@ -16,7 +16,7 @@
 @layer base {
   body {
     @apply bg-brand-dark text-white font-sans antialiased;
-  }
+  } /* End of base layer */
 
   /* OLED - default */
   html.theme-oled {

@@ -18,6 +18,7 @@ import { RadioAddon } from '../addons/radio';
 import { InternetArchiveAddon } from '../addons/internetarchive';
 import { YouTubeAddon } from '../addons/youtube';
 import { ItunesAddon } from '../addons/itunes/index';
+import { JioSaavnAddon } from '../addons/Jiosaavn/index.ts';
 
 export function usePlayTrack() {
   const { setTrack } = usePlayerStore();
@@ -59,6 +60,9 @@ export function usePlayTrack() {
         case 'YouTube':
           streamUrl = await YouTubeAddon.getStreamUrl(track.id);
           break;
+          case 'JioSaavn':
+            streamUrl = await JioSaavnAddon.getStreamUrl(track.id);
+            break;  
         default:
           throw new Error(`No addon found for source: ${track.source}`);
       }

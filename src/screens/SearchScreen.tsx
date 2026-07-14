@@ -14,6 +14,8 @@ import { useAddonStore } from '../Store/addonStore';
 import { usePlayTrack } from '../hooks/usePlayTrack';
 import { InternetArchiveAddon } from '../addons/internetarchive';
 import { ItunesAddon } from '../addons/itunes/index';
+import { JioSaavnAddon } from '../addons/Jiosaavn/index.ts';
+
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
@@ -64,7 +66,7 @@ interface SearchScreenProps {
   onPlayTrack?: (track: Track) => void;
 }
 
-type SourceFilter = 'all' | 'audius' | 'radio' | 'internetarchive' | 'itunes';
+type SourceFilter = 'all' | 'audius' | 'radio' | 'internetarchive' | 'itunes' | 'jiosaavn';
 type TypeFilter   = 'all' | 'tracks' | 'live';
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -102,6 +104,7 @@ export default function SearchScreen({ onPlayTrack }: SearchScreenProps) {
     if (typeFilter   === 'live'   && t.duration !== 'LIVE') return false;
     if (typeFilter   === 'tracks' && t.duration === 'LIVE') return false;
     if (sourceFilter === 'itunes' && t.source !== 'iTunes') return false;
+    if (sourceFilter === 'jiosaavn' && t.source !== 'JioSaavn') return false;
     return true;
   });
 
@@ -120,7 +123,9 @@ export default function SearchScreen({ onPlayTrack }: SearchScreenProps) {
         if (isEnabled('aether.archive')) all.push(...await InternetArchiveAddon.search(searchQuery));
         if (isEnabled('aether.youtube')) all.push(...await YouTubeAddon.search(searchQuery));
         if (isEnabled('aether.itunes')) all.push(...await ItunesAddon.search(searchQuery));
+        if (isEnabled('aether.jiosaavn')) all.push(...await JioSaavnAddon.search(searchQuery));
         if (!all.length) setSearchError('No sources connected. Go to Add-ons and install a source.');
+        console.log(all);
         setResults(all);
       } catch (err) {
         setSearchError(err instanceof Error ? err.message : 'Search failed');

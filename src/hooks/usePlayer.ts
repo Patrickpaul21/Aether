@@ -2,30 +2,16 @@ import { useEffect, useRef, useCallback } from 'react';
 import { Howl } from 'howler';
 import { usePlayerStore } from '../Store/playerStore';
 import { AudiusAddon } from '../addons/audius';
-import { RadioAddon } from '../addons/radio'; 
+import { RadioAddon } from '../addons/radio';
 import { InternetArchiveAddon } from '../addons/internetarchive';
 import { YouTubeAddon } from '../addons/youtube';
 import { ItunesAddon } from '../addons/itunes';
+import { JioSaavnAddon } from '../addons/Jiosaavn';
 
-/**
- * usePlayer — audio engine.
- * Mount ONCE at the app root (App.tsx).
- *
- * Two-effect architecture:
- *   Effect 1 — watches currentTrack.id
- *              If the track has no streamUrl, resolves it via the correct addon
- *              then writes it back to the store via updateStreamUrl.
- *
- *   Effect 2 — watches currentTrack.streamUrl
- *              Once the URL exists, tears down the old Howl and creates a new one.
- *
- * This means skip/next/prev all work correctly — the URL gets resolved
- * automatically for any track in the queue, not just the one initially tapped.
- */
 export function usePlayer() {
   const howlRef = useRef<Howl | null>(null);
   const rafRef  = useRef<number | null>(null);
-  const resolvingRef = useRef<string | null>(null); // track ID currently being resolved
+  const resolvingRef = useRef<string | null>(null);
 
   const {
     currentTrack,
@@ -60,8 +46,19 @@ export function usePlayer() {
   // ── Effect 1: Resolve stream URL when a track without one becomes current ──
   useEffect(() => {
     if (!currentTrack) return;
-    if (currentTrack.streamUrl) return;          // already resolved
-    if (resolvingRef.current === currentTrack.id) return; // already resolving
+
+    // JioSaavn tokens expire quickly — always re-resolve, never use cached URL
+    const needsResolve = !currentTrack.streamUrl ||
+      currentTrack.source === 'JioSaavn';
+
+    if (!needsResolve) return;
+    if (resolvingRef.current === currentTrack.id) return;
+
+    // Clear any stale JioSaavn URL so Effect 2 doesn't fire with expired URL
+    if (currentTrack.source === 'JioSaavn' && currentTrack.streamUrl) {
+      updateStreamUrl(currentTrack.id, '');
+      return; // updateStreamUrl will trigger re-render, Effect 1 will fire again
+    }
 
     resolvingRef.current = currentTrack.id;
 
@@ -73,25 +70,26 @@ export function usePlayer() {
           case 'Audius':
             url = await AudiusAddon.getStreamUrl(currentTrack!.id);
             break;
-            case 'Radio Browser':
-              url = await RadioAddon.getStreamUrl(currentTrack!.id);
-              break;
-            case 'Internet Archive':
-              url = await InternetArchiveAddon.getStreamUrl(currentTrack!.id);
-              break;
-            case 'YouTube':
-              url = await YouTubeAddon.getStreamUrl(currentTrack!.id);
-              break;
-              case 'iTunes':
-               url = await ItunesAddon.getStreamUrl(currentTrack!.id);
-              break;
+          case 'Radio Browser':
+            url = await RadioAddon.getStreamUrl(currentTrack!.id);
+            break;
+          case 'Internet Archive':
+            url = await InternetArchiveAddon.getStreamUrl(currentTrack!.id);
+            break;
+          case 'YouTube':
+            url = await YouTubeAddon.getStreamUrl(currentTrack!.id);
+            break;
+          case 'iTunes':
+            url = await ItunesAddon.getStreamUrl(currentTrack!.id);
+            break;
+          case 'JioSaavn':
+            url = await JioSaavnAddon.getStreamUrl(currentTrack!.id);
+            break;
           default:
             console.warn('[Aether] No addon found for source:', currentTrack!.source);
             return;
         }
 
-        // Write the resolved URL back to the store.
-        // This triggers Effect 2 which loads Howler.
         updateStreamUrl(currentTrack!.id, url);
       } catch (err) {
         console.error('[Aether] Failed to resolve stream URL:', err);
@@ -103,7 +101,7 @@ export function usePlayer() {
 
     resolve();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentTrack?.id]);
+  }, [currentTrack?.id, currentTrack?.streamUrl]);
 
   const preResolvingRef = useRef<Set<string>>(new Set());
   const preloadHowlRef = useRef<Howl | null>(null);
@@ -117,6 +115,7 @@ export function usePlayer() {
 
       if (!nextTrack) return;
       if (nextTrack.streamUrl) return;
+      if (nextTrack.source === 'JioSaavn') return; // Never pre-resolve JioSaavn
       if (preResolvingRef.current.has(nextTrack.id)) return;
 
       preResolvingRef.current.add(nextTrack.id);
@@ -155,7 +154,7 @@ export function usePlayer() {
               src: [resolvedTrack.streamUrl],
               html5: true,
               volume: 0,
-              format: ['mp3', 'ogg', 'aac', 'opus'],
+              format: ['mp4', 'aac', 'mp3', 'ogg', 'opus'],
               preload: true,
             });
           }
@@ -185,7 +184,7 @@ export function usePlayer() {
       src:    [currentTrack.streamUrl],
       html5:  true,
       volume: isMuted ? 0 : volume,
-      format: ['mp3', 'ogg', 'aac', 'opus'],
+      format: ['mp4', 'aac', 'mp3', 'ogg', 'opus'],
 
       onload: () => {
         setDuration(howl.duration());
@@ -217,7 +216,6 @@ export function usePlayer() {
       },
 
       onplayerror: (_id, _err) => {
-        // Browser autoplay policy — unlock and retry
         howl.once('unlock', () => howl.play());
       },
     });
@@ -229,7 +227,6 @@ export function usePlayer() {
       howl.unload();
       stopLoop();
     };
-  // KEY: watch streamUrl, not track.id — fires once URL is resolved
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTrack?.streamUrl]);
 
