@@ -1,204 +1,147 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Aether OS
 
-# Run and deploy your AI Studio app
+A local-first music streaming web app with an open addon architecture. No subscriptions, no algorithms, no data collection — just your music, your sources, your rules.
 
-This contains everything you need to run your app locally.
-
-View your app in AI Studio: https://ai.studio/apps/e3e1b82e-8d6a-43de-8fb3-922d9161caeb
-
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
-
-# Aether 🎵
-
-A local-first music streaming client powered by user-installed addons. No backend, no server costs. You connect your own sources.
-
-**Core philosophy:** Your music client, your sources, your data.
-
-> 🚧 Live demo coming soon
+> **Android packaging in progress via Capacitor.**
+> Live demo: [aether-os-main.vercel.app](https://aether-os-main.vercel.app)
 
 ---
 
-## What is Aether?
+## What it is
 
-Aether is an open source music streaming app that runs entirely in the browser. Instead of being locked into one service, you install addons to connect your own music sources — free streaming platforms, self-hosted servers, live radio, and more.
+Aether is a music client, not a music service. Instead of locking you into one catalogue, it connects to independent audio sources through a simple addon system. You install the sources you want, search across all of them at once, and play without an account.
 
-No account required. No ads. No tracking.
+Everything is local. Your playlists, liked songs, and play history live in your browser via IndexedDB. Nothing leaves your device.
+
+---
+
+## Sources
+
+| Addon | What it gives you |
+|---|---|
+| Audius | Independent and underground music, no account required |
+| Radio Browser | 30,000+ live radio stations worldwide |
+| Internet Archive | 250,000+ public domain live concert recordings |
+| iTunes Preview | 30-second previews across 100M+ tracks, no credentials |
+| LRCLIB | Time-synced lyrics for supported tracks |
+
+More sources can be connected from the Add-ons screen. User-installable custom sources are in development.
 
 ---
 
 ## Features
 
-- 🎵 **Multi-source streaming** — Audius, Radio Browser, more coming
-- 📻 **Live radio** — 30,000+ stations via Radio Browser
-- 🔌 **Extensible addon system** — connect any source via the addon API
-- 🎨 **Apple Music-style UI** — NowPlaying screen, blurred album art, smooth animations
-- 💾 **Local-first** — play history and preferences saved locally, no account needed
-- ⚡ **Fast** — pre-resolves stream URLs in the background before you skip
+- **Multi-source search** — searches all connected addons simultaneously, results interleaved
+- **Now Playing** — full-bleed album art, time-synced lyrics, queue management, tap to hide controls
+- **3-effect audio engine** — silently pre-resolves and pre-loads the next two tracks, cutting skip latency to near-instant
+- **Addon architecture** — sources and themes are first-class addons with a documented contract
+- **4 built-in themes** — OLED, Cosmic, Obsidian, ASCII — all built on the same CSS variable system as custom themes
+- **Local playlists** — create, manage, and persist playlists entirely client-side via Dexie/IndexedDB
+- **Liked songs** — auto-playlist, persisted locally
+- **Play history** — recently played, continue listening
+- **Live radio** — dedicated radio tab with scoped search
 
 ---
 
-## Built With
+## Addon contract
 
-- Vite + React + TypeScript
-- Tailwind CSS
-- Zustand (state management)
-- Howler.js (audio engine)
-- Framer Motion (animations)
-
----
-
-## Getting Started
-
-```bash
-# Clone the repo
-git clone https://github.com/Patrickpaul155/Aether-OS.git
-cd Aether-OS
-
-# Install dependencies
-npm install
-
-# Start the dev server
-npm run dev
-```
-
-Open `http://localhost:5173` in your browser.
-
----
-
-## Addons
-
-Aether uses an addon system to connect music sources. Install addons from the Add-ons screen inside the app.
-
-### Available Now
-
-| Addon | Type | Credentials |
-|---|---|---|
-| Audius | Source | None (optional Bearer token for higher limits) |
-| Radio Browser | Source | None |
-
-### Coming Soon
-
-| Addon | Type | Status |
-|---|---|---|
-| YouTube Music | Source | In research — [vote on this issue](#) |
-| JioSaavn | Source | Planned |
-| Navidrome | Source | UI ready, needs server |
-| Jellyfin | Source | UI ready, needs server |
-| Last.fm | Tool | Planned |
-
----
-
-## Addon API
-
-Want to build your own source addon? Every source addon implements this contract:
+Any source addon must implement:
 
 ```typescript
 interface SourceAddon {
   manifest: {
-    id: string;          // e.g. 'aether.mysource'
-    name: string;
-    version: string;
-    type: 'source';
-    requiredConfig: string[]; // credential keys, empty = one-tap install
-  };
-
-  // Search and return tracks
-  search(query: string): Promise<Track[]>;
-
-  // Return a playable stream URL for a track ID
-  getStreamUrl(trackId: string): Promise<string>;
-
-  // Optional — featured/trending tracks for the Home screen
-  getFeatured?(): Promise<Track[]>;
+    id: string          // e.g. 'aether.mysource'
+    name: string
+    version: string
+    type: 'source'
+    description: string
+  }
+  search(query: string): Promise<Track[]>
+  getStreamUrl(trackId: string): Promise<string>
+  getFeatured?(): Promise<Track[]>
 }
 ```
 
-The `Track` type:
-
-```typescript
-interface Track {
-  id: string;
-  title: string;
-  artist: string;
-  source: string;     // must match your addon name exactly
-  coverUrl: string;
-  duration?: string;  // e.g. '3:45' or 'LIVE' for radio
-  streamUrl?: string; // pre-baked URL (radio) or resolved lazily (on-demand)
-}
-```
-
-See `src/addons/audius/index.ts` and `src/addons/radio/index.ts` for full examples.
+Theme addons override CSS variables scoped to a class on `document.documentElement`.
 
 ---
 
-## Project Structure
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Framework | React + TypeScript |
+| Build | Vite |
+| Styling | Tailwind CSS |
+| Animation | Framer Motion |
+| Audio | Howler.js |
+| State | Zustand (persisted) |
+| Local DB | Dexie.js (IndexedDB) |
+| Deployment | Vercel |
+
+---
+
+## Running locally
+
+```bash
+git clone https://github.com/Patrickpaul21/Aether.git
+cd Aether
+
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000` in Chrome DevTools with a mobile device profile selected (Pixel 7 or similar) — Aether is designed for mobile dimensions.
+
+---
+
+## Project structure
 
 ```
 src/
-├── addons/
-│   ├── audius/        Audius addon
-│   └── radio/         Radio Browser addon
-├── hooks/
-│   ├── usePlayer.ts   Howler.js audio engine (two-effect architecture)
-│   └── usePlayTrack.ts Resolves stream URL then hands off to player
-├── store/
-│   ├── playerStore.ts  Zustand — playback state, queue, history
-│   └── addonStore.ts   Zustand (persisted) — installed addons + config
-└── screens/
-    ├── HomeScreen.tsx
-    ├── SearchScreen.tsx
-    ├── NowPlayingScreen.tsx
-    ├── LibraryScreen.tsx
-    ├── AddOnsScreen.tsx
-    └── SettingsScreen.tsx
+├── addons/          # Source and utility addons
+│   ├── audius/
+│   ├── internetarchive/
+│   ├── itunes/
+│   ├── Jiosaavn/
+│   ├── radio/
+│   ├── lyrics/      # LRCLIB integration
+│   └── spotify/     # OAuth scaffold (in progress)
+├── screens/         # App screens
+├── Store/           # Zustand stores
+├── hooks/           # usePlayer, usePlayTrack
+├── db/              # Dexie database
+├── themes/          # CSS theme definitions
+└── types.ts         # Shared TypeScript types
+api/
+└── jiosaavn.ts      # Vercel serverless proxy
 ```
-
----
-
-## Contributing
-
-Contributions are welcome — especially new addon sources.
-
-1. Fork the repo
-2. Create your branch: `git checkout -b addon/mysource`
-3. Build your addon following the API contract above
-4. Open a pull request
-
-If you want to suggest a new source, open an issue and describe the API.
 
 ---
 
 ## Roadmap
 
-- [ ] YouTube Music addon
-- [ ] JioSaavn addon
-- [ ] Playlist creation (Dexie.js)
-- [ ] Library screen with real data
-- [ ] Lyrics support
-- [ ] Onboarding screen
-- [ ] PWA support
+- [ ] Android packaging via Capacitor
+- [ ] User-installable custom addons (source + theme)
+- [ ] YouTube Music integration (requires Android/native)
+- [ ] Last.fm scrobbling
+- [ ] Discogs metadata
+- [ ] Equalizer (native audio pipeline)
+- [ ] Background playback (Android)
+- [ ] Lock screen controls (Android)
 
 ---
 
-## License
+## Notes
 
-MIT — see [LICENSE](LICENSE) for details.
+- JioSaavn integration is present but geo-restricted at the CDN level on web — works correctly once packaged for Android
+- YouTube Music requires native Android libraries (Innertube/NewPipe) not available in browser context — planned for Capacitor build
+- Cart, checkout features referenced in some source files are unrelated scaffolding from an earlier internship project and are not part of Aether
 
 ---
 
-## Author
+## Built by
 
-Built by [Patrick](https://github.com/Patrickpaul155) — designer and developer.
+Patrick Dondapati — [patrickdondapati.framer.website](https://patrickdondapati.framer.website) · [Behance](https://behance.net/patrickpaul21)
 
-Portfolio: [patrickdondapati.framer.website](https://patrickdondapati.framer.website) · Behance: [patrickpaul21](https://behance.net/patrickpaul21)
+*Built with Claude and Cursor as core AI-assisted development tools.*
