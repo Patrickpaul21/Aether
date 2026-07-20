@@ -129,7 +129,7 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
       animate={{ y: 0 }}
       exit={{ y: '100%' }}
       transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
-      className="absolute inset-0 z-[100] flex flex-col overflow-hidden text-white"
+     className="absolute inset-0 z-[100] flex flex-col overflow-hidden text-white bg-black"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       {/* Panning blurred background */}
@@ -270,27 +270,27 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
                 </div>
 
                 {/* Progress bar */}
-                <div className="mb-5">
-                  <div
-                    ref={progressRef}
-                    className="relative w-full cursor-pointer"
-                    style={{ paddingTop: 8, paddingBottom: 8 }}
-                    onClick={handleProgressClick}
-                    onMouseDown={() => setScrubbing(true)}
-                    onMouseUp={() => setScrubbing(false)}
-                    onMouseLeave={() => setScrubbing(false)}
-                  >
-                    <div className="w-full rounded-full overflow-hidden bg-white/20 transition-all"
-                      style={{ height: scrubbing ? 5 : 3, transition: 'height 0.15s' }}>
-                      <div className="h-full bg-white rounded-full transition-all duration-700 ease-linear"
-                        style={{ width: `${progressPercent}%` }} />
-                    </div>
-                  </div>
-                  <div className="flex justify-between text-[11px] text-white/40 font-medium tracking-tight -mt-1">
-                    <span>{formatTime(currentTime)}</span>
-                    <span>-{formatTime(Math.max(0, duration - currentTime))}</span>
-                  </div>
-                </div>
+               <div className="mb-5">
+                <div
+               ref={progressRef}
+               className="relative w-full cursor-pointer"
+               style={{ paddingTop: 8, paddingBottom: 8 }}
+               onClick={handleProgressClick}
+               onMouseDown={() => setScrubbing(true)}
+               onMouseUp={() => setScrubbing(false)}
+               onMouseLeave={() => setScrubbing(false)}
+               >
+               <div className="w-full rounded-full overflow-hidden bg-white/20 transition-all"
+              style={{ height: scrubbing ? 5 : 3, transition: 'height 0.15s' }}>
+              <div className="h-full bg-white rounded-full transition-all duration-700 ease-linear"
+              style={{ width: duration > 0 && isFinite(duration) ? `${progressPercent}%` : '100%' }} />
+            </div>
+           </div>
+          <div className="flex justify-between text-[11px] text-white/40 font-medium tracking-tight -mt-1">
+          <span>{duration > 0 && isFinite(duration) ? formatTime(currentTime) : 'LIVE'}</span>
+          <span>{duration > 0 && isFinite(duration) ? `-${formatTime(Math.max(0, duration - currentTime))}` : ''}</span>
+          </div>
+          </div>
 
                 {/* Transport */}
                 <div className="flex justify-between items-center mb-6 px-1">
@@ -367,7 +367,8 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
         {/* Lyrics */}
         {viewMode === 'lyrics' && (
           <motion.div key="lyrics" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-            className="flex-1 flex flex-col px-6 pt-6 pb-10 overflow-hidden">
+          className="absolute inset-0 flex flex-col px-6 pt-16 pb-10 overflow-hidden z-40"
+          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(40px)' }}>
             <div className="flex justify-between items-center mb-8 shrink-0">
               <h2 className="text-2xl font-bold">Lyrics</h2>
               <button onClick={() => setViewMode('artwork')} className="text-white/40 hover:text-white transition-colors"><ChevronDown size={24} /></button>
@@ -399,7 +400,8 @@ export default function NowPlayingScreen({ track, isPlaying, onTogglePlay, onClo
         {/* Queue */}
         {viewMode === 'queue' && (
           <motion.div key="queue" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.02 }}
-            className="flex-1 flex flex-col px-6 pt-6 pb-10">
+          className="absolute inset-0 flex flex-col px-6 pt-16 pb-10 z-40"
+          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(40px)' }}>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xs font-bold text-white/40 tracking-widest uppercase">Up Next</h2>
               <button onClick={() => setViewMode('artwork')} className="text-white/40 hover:text-white transition-colors"><ChevronDown size={22} /></button>

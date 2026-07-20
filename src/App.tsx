@@ -86,49 +86,78 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      {/* Floating Mini Player */}
-      {!isPlayerOpen && (
-        <motion.div 
-          initial={{ y: 100 }}
-          animate={{ y: 0 }}
-          className="absolute bottom-24 left-4 right-4 z-40"
+    {/* Floating Mini Player */}
+{!isPlayerOpen && (
+  <motion.div
+    initial={{ y: 100, opacity: 0 }}
+    animate={{ y: 0, opacity: 1 }}
+    exit={{ y: 100, opacity: 0 }}
+    transition={{ type: 'spring', damping: 26, stiffness: 220 }}
+    className="absolute bottom-24 left-3 right-3 z-40"
+  >
+    <div
+      onClick={() => setIsPlayerOpen(true)}
+      className="relative flex items-center gap-3 px-3 py-2.5 rounded-2xl cursor-pointer active:scale-[0.98] transition-transform overflow-hidden"
+      style={{ background: 'rgba(20,20,20,0.85)', backdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.08)' }}
+    >
+      {/* Blurred album art background */}
+      <div className="absolute inset-0 pointer-events-none">
+        <img
+          src={displayTrack.coverUrl}
+          alt=""
+          className="w-full h-full object-cover opacity-20"
+          style={{ filter: 'blur(20px)', transform: 'scale(1.2)' }}
+        />
+        <div className="absolute inset-0 bg-black/50" />
+      </div>
+
+      {/* Album art */}
+      <div className="w-11 h-11 flex-shrink-0 rounded-xl overflow-hidden relative z-10">
+        <img
+          src={displayTrack.coverUrl}
+          alt={displayTrack.title}
+          className="w-full h-full object-cover"
+        />
+      </div>
+
+      {/* Track info */}
+      <div className="flex-1 min-w-0 relative z-10">
+        <h4 className="text-sm font-bold truncate text-white">{displayTrack.title}</h4>
+        <p className="text-[11px] text-white/45 truncate mt-0.5">{displayTrack.artist}</p>
+      </div>
+
+      {/* Controls */}
+      <div
+        className="flex items-center gap-3 shrink-0 relative z-10"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={() => currentTrack && togglePlay()}
+          className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors active:scale-90"
         >
-          <div 
-            onClick={() => setIsPlayerOpen(true)}
-            className="bg-brand-card/95 backdrop-blur-md border border-white/5 rounded-xl p-3 flex items-center justify-between shadow-lg cursor-pointer active:scale-[0.98] transition-transform"
-          >
-            <div className="flex items-center gap-3 overflow-hidden">
-              <div className="w-10 h-10 flex-shrink-0 bg-zinc-800 rounded overflow-hidden">
-                <img src={displayTrack.coverUrl} alt={displayTrack.title} className="w-full h-full object-cover" />
-              </div>
-              <div className="overflow-hidden">
-                <h4 className="text-sm font-bold truncate">{displayTrack.title}</h4>
-                <p className="text-[10px] text-gray-400 truncate">{displayTrack.artist} • {displayTrack.source}</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4 px-2" onClick={(e) => e.stopPropagation()}>
-              <button 
-                onClick={() => currentTrack && togglePlay()}
-                className="text-white hover:text-brand-green transition-colors"
-              >
-                {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />}
-              </button>
-              <button 
-                  onClick={() => currentTrack && next()}
-                   className="text-white hover:text-brand-green transition-colors">
-                   <SkipForward size={20} fill="currentColor" />
-                </button>
-            </div>
-            {/* Progress Bar */}
-            <div className="absolute bottom-0 left-2 right-2 h-[2px] bg-white/20 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-brand-green rounded-full transition-[width] duration-200"
-                style={{ width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%' }}
-              />
-            </div>
-          </div>
-        </motion.div>
-      )}
+          {isPlaying
+            ? <Pause size={16} fill="currentColor" strokeWidth={0} />
+            : <Play size={16} fill="currentColor" strokeWidth={0} className="ml-0.5" />
+          }
+        </button>
+        <button
+          onClick={() => currentTrack && next()}
+          className="text-white/60 hover:text-white transition-colors active:scale-90"
+        >
+          <SkipForward size={20} fill="currentColor" strokeWidth={0} />
+        </button>
+      </div>
+
+      {/* Progress bar — inside at bottom edge */}
+      <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/10">
+        <div
+          className="h-full bg-white/60 transition-[width] duration-300 ease-linear"
+          style={{ width: duration > 0 && isFinite(duration) ? `${(currentTime / duration) * 100}%` : '0%' }}
+        />
+      </div>
+    </div>
+  </motion.div>
+)}
 
       {/* Bottom Navigation */}
       <nav className="absolute bottom-0 inset-x-0 bg-brand-dark/95 backdrop-blur-md border-t border-brand-border px-6 py-4 flex justify-between items-center z-50 pb-8">
